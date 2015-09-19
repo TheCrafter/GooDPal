@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Google.Apis.Drive.v2.Data;
+using DriveFile = Google.Apis.Drive.v2.Data.File;
 
 namespace GooDPal.Drive
 {
@@ -24,7 +25,7 @@ namespace GooDPal.Drive
             mgr.SetProgressCallback(UploadProgressCallback);
         }
 
-        public void Init(string filepath, string descr, string parent)
+        public void SetupFile(string filepath, string descr, string parent)
         {
             this.mFilepath = filepath;
             this.mDescr = descr;
@@ -38,6 +39,20 @@ namespace GooDPal.Drive
             mFileLength = info.Length;
 
             await mMgr.UploadFile(mFilepath, mDescr, mParent);
+        }
+
+        public async Task Update()
+        {
+            // Find file length
+            FileInfo info = new FileInfo(mFilepath);
+            mFileLength = info.Length;
+
+            DriveFile file = DriveManager.FindFileByName(mMgr.RetrieveFiles(), Path.GetFileName(mFilepath));
+
+            if (file != null)
+                await mMgr.UpdateFile(mFilepath, mDescr, mParent, file.Id);
+            else
+                throw new Exception("Could not find this file on Drive.");
         }
 
         private void UploadProgressCallback(Google.Apis.Upload.IUploadProgress prog)

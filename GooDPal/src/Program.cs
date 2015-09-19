@@ -45,10 +45,8 @@ namespace GooDPal
             {
                 Task.Run(async () =>
                     {
-                        f.Init("C:\\Users\\TheCrafter\\Desktop\\asd.txt", "asdasd", "root");
-                        await f.Upload();
-                        f.Init("C:\\Users\\TheCrafter\\Desktop\\asd.txt", "asdasd2", "root");
-                        await f.Upload();
+                        f.SetupFile("C:\\Users\\TheCrafter\\Desktop\\asd2\\asd.txt", "asdasd", "root");
+                        await f.Update();
                     });
             }
             catch (Exception e)
@@ -58,15 +56,6 @@ namespace GooDPal
 
             Console.WriteLine("Press enter to continue . . .");
             Console.Read();
-        }
-
-        static DriveFile FindFileByName(IList<DriveFile> files, string title)
-        {
-            foreach (Google.Apis.Drive.v2.Data.File file in files)
-                if (file.Title.Equals(title))
-                    return file;
-
-            return null;
         }
     }
 }

@@ -128,7 +128,7 @@ namespace GooDPal.Drive
 
         }
 
-        public DriveFile UpdateFile(string filepath, string descr, string parent, string fileId)
+        public async Task<DriveFile> UpdateFile(string filepath, string descr, string parent, string fileId)
         {
 
             if (System.IO.File.Exists(filepath))
@@ -149,7 +149,8 @@ namespace GooDPal.Drive
                 if (mProgressCallback != null)
                     request.ProgressChanged += new Action<Google.Apis.Upload.IUploadProgress>(mProgressCallback);
 
-                request.Upload();
+                request.ChunkSize = 256 * 1024;
+                await request.UploadAsync(CancellationToken.None);
 
                 return request.ResponseBody;
             }
@@ -184,6 +185,14 @@ namespace GooDPal.Drive
             if (regKey != null && regKey.GetValue("Content Type") != null)
                 mimeType = regKey.GetValue("Content Type").ToString();
             return mimeType;
+        }
+        public static DriveFile FindFileByName(IList<DriveFile> files, string title)
+        {
+            foreach (Google.Apis.Drive.v2.Data.File file in files)
+                if (file.Title.Equals(title))
+                    return file;
+
+            return null;
         }
     }
 }
