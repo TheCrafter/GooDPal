@@ -68,13 +68,70 @@ namespace GooDPal.Drive
             Console.WriteLine("Credential file saved to: " + CredentialSavePath);
         }
 
-        public IList<DriveFile> RetrieveFiles()
+        public IList<DriveFile> FetchWithSearch(string search)
         {
-            // Define parameters of request.
-            FilesResource.ListRequest listRequest = mDriveService.Files.List();
-            listRequest.MaxResults = 10;
+            IList<DriveFile> files = new List<DriveFile>();
 
-            return listRequest.Execute().Items;
+            //List all of the files and directories for the current user.  
+            FilesResource.ListRequest request = mDriveService.Files.List();
+            request.MaxResults = 1000;
+
+            if (search != null)
+                request.Q = search;
+
+            FileList filesFeed = request.Execute();
+
+            // Loop through until we arrive at an empty page
+            while (filesFeed.Items != null)
+            {
+                // Adding each item  to the list.
+                foreach (DriveFile item in filesFeed.Items)
+                    files.Add(item);
+
+                // We will know we are on the last page when the next page token is
+                // null.
+                // If this is the case, break.
+                if (filesFeed.NextPageToken == null)
+                    break;
+
+                // Prepare the next page of results
+                request.PageToken = filesFeed.NextPageToken;
+
+                // Execute and process the next page request
+                filesFeed = request.Execute();
+            }
+
+            return files;
+        }
+
+        public IList<DriveFile> FetchNonTrashed()
+        {
+            return FetchWithSearch("trashed=false");
+        }
+
+        public IList<DriveFile> FetchFiles()
+        {
+            return FetchWithSearch("mimeType!='application/vnd.google-apps.folder' and trashed=false");
+        }
+
+        public IList<DriveFile> FetchDirectories()
+        {
+            return FetchWithSearch("mimeType='application/vnd.google-apps.folder' and trashed=false");
+        }
+
+        public IList<DriveFile> FetchChildren(string parentId)
+        {
+            return FetchWithSearch("trashed=false and '" + parentId + "' in parents");
+        }
+
+        public IList<DriveFile> FetchChildrenFiles(string parentId)
+        {
+            return FetchWithSearch("mimeType!='application/vnd.google-apps.folder' and trashed=false and '" + parentId + "' in parents");
+        }
+
+        public IList<DriveFile> FetchChildrenDirectories(string parentId)
+        {
+            return FetchWithSearch("mimeType='application/vnd.google-apps.folder' and trashed=false and '" + parentId + "' in parents");
         }
 
         public DriveFile CreateDirectory(string title, string descr, string parent)
@@ -186,6 +243,7 @@ namespace GooDPal.Drive
                 mimeType = regKey.GetValue("Content Type").ToString();
             return mimeType;
         }
+
         public static DriveFile FindFileByName(IList<DriveFile> files, string title)
         {
             foreach (Google.Apis.Drive.v2.Data.File file in files)

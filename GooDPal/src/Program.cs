@@ -39,15 +39,16 @@ namespace GooDPal
             if (service == null)
                 System.Environment.Exit(0);
 
-            FileUploader f = new FileUploader(dMgr);
+            // Create directory structure from path
+            Directory dir = new Directory("C:\\Users\\TheCrafter\\Desktop\\Test");
+            dir.Init();
 
             try
             {
                 Task.Run(async () =>
-                    {
-                        f.SetupFile("C:\\Users\\TheCrafter\\Desktop\\asd2\\asd.txt", "asdasd", "root");
-                        await f.Update();
-                    });
+                {
+                    await SyncDirectory(dir, dMgr);
+                }).Wait();
             }
             catch (Exception e)
             {
@@ -56,6 +57,102 @@ namespace GooDPal
 
             Console.WriteLine("Press enter to continue . . .");
             Console.Read();
+        }
+
+        static async Task SyncDirectory(Directory dir, DriveManager mgr)
+        {
+            IList<DriveFile> files = mgr.FetchDirectories();
+
+            // Find root id
+            string rootId = "";
+            foreach (DriveFile file in files)
+            {
+                IList<ParentReference> parents = file.Parents;
+                foreach (ParentReference p in parents)
+                    if (p.IsRoot.HasValue)
+                        if ((bool)p.IsRoot)
+                            rootId = p.Id;
+            }
+
+            // Start recursive sync process from root
+            await SyncDirectoryR(dir, mgr, rootId);
+        }
+
+        static async Task SyncDirectoryR(Directory dir, DriveManager mgr, string parentId)
+        {
+            FileUploader uploader = new FileUploader(mgr);
+
+            // Get directories of parent and find this folder's id in drive
+            IList<DriveFile> parentChildren = mgr.FetchChildren(parentId);
+            string dirId = "";
+            foreach (DriveFile file in parentChildren)
+                if (file.Title.Equals(dir.GetName()))
+                    dirId = file.Id;
+
+            // Folder does not exist so create it
+            if (dirId.Equals(""))
+                dirId = mgr.CreateDirectory(dir.GetName(), dir.GetName(), parentId).Id;
+
+            // Get files of this directory in drive
+            IList<DriveFile> childrenFiles = mgr.FetchChildrenFiles(dirId);
+
+            // Start syncing this directory
+            // Check the drive for any files that do not exist locally and delete them
+            foreach (DriveFile dFile in childrenFiles)
+            {
+                bool existsLocally = false;
+                foreach (string file in dir.GetFiles())
+                {
+                    if (dFile.Title.Equals(Path.GetFileName(file)))
+                    {
+                        existsLocally = true;
+                        break;
+                    }
+                }
+
+                // Delete if it doesn't exist
+                if (!existsLocally)
+                {
+                    Console.WriteLine("Deleting " + dFile.Title);
+                    mgr.DeleteFile(dFile.Id);
+                }
+            }
+
+            // Upload or update files
+            foreach (string file in dir.GetFiles())
+            {
+                // Get simple filename
+                string filename = Path.GetFileName(file);
+
+                // Try to find it on drive
+                bool found = false;
+                foreach (DriveFile dFile in childrenFiles)
+                {
+                    if (dFile.Title.Equals(filename))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                // If didn't found it, upload it
+                if (found)
+                {
+                    // TODO: Check if should be updated
+                    uploader.SetupFile(file, file, dirId);
+                    Console.WriteLine("Updating " + Path.GetFileName(file));
+                    await uploader.Update();
+                }
+                else
+                {
+                    uploader.SetupFile(file, file, dirId);
+                    await uploader.Upload();
+                }
+            }
+
+            // Now get subdirectories and sync them
+            foreach (Directory subDir in dir.getSubDirectories())
+                await SyncDirectoryR(subDir, mgr, dirId);
         }
     }
 }
