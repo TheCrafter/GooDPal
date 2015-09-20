@@ -65,7 +65,7 @@ namespace GooDPal.Drive
 
         private void UploadProgressCallback(Google.Apis.Upload.IUploadProgress prog)
         {
-            string uploadMsg = mUploadBaseMsg + " -- " + Path.GetFileName(mFilepath) + " ->";
+            string uploadMsg = mUploadBaseMsg + " -- " + mFilepath + " ->";
 
             switch (prog.Status)
             {
