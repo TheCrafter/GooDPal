@@ -12,16 +12,16 @@ namespace GooDPal.Drive
     class DirectorySynchronizer
     {
         private DriveManager mDMgr;
+        private FileUploader mUploader;
 
         public DirectorySynchronizer(DriveManager mgr)
         {
             this.mDMgr = mgr;
+            this.mUploader = new FileUploader(mDMgr);
         }
 
         public async Task SyncDirectory(Directory dir, string parentId)
         {
-            FileUploader uploader = new FileUploader(mDMgr);
-
             // Get directories of parent and find this folder's id in drive
             IList<DriveFile> parentChildren = mDMgr.FetchChildren(parentId);
             string dirId = "";
@@ -93,14 +93,14 @@ namespace GooDPal.Drive
 
                     if (shouldUpload)
                     {
-                        uploader.SetupFile(file, file, dirId);
-                        await uploader.Update();
+                        mUploader.SetupFile(file, file, dirId);
+                        await mUploader.Update();
                     }
                 }
                 else
                 {
-                    uploader.SetupFile(file, file, dirId);
-                    await uploader.Upload();
+                    mUploader.SetupFile(file, file, dirId);
+                    await mUploader.Upload();
                 }
             }
 
