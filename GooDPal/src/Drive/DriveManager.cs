@@ -252,5 +252,10 @@ namespace GooDPal.Drive
 
             return null;
         }
+
+        public static bool IsDirectory(DriveFile file)
+        {
+            return file.MimeType.Equals("application/vnd.google-apps.folder");
+        }
     }
 }

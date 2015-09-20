@@ -22,8 +22,9 @@ namespace GooDPal.Drive
 
         public async Task SyncDirectory(Directory dir, string parentId)
         {
-            // Get directories of parent and find this folder's id in drive
-            IList<DriveFile> parentChildren = mDMgr.FetchChildren(parentId);
+            // Get directories of parent and find this folder's id in drive (if exists)
+            IList<DriveFile> parentChildren = mDMgr.FetchChildrenDirectories(parentId);
+
             string dirId = "";
             foreach (DriveFile file in parentChildren)
                 if (file.Title.Equals(dir.GetName()))
@@ -33,14 +34,16 @@ namespace GooDPal.Drive
             if (dirId.Equals(""))
                 dirId = mDMgr.CreateDirectory(dir.GetName(), dir.GetName(), parentId).Id;
 
-            // Get files of this directory in drive
-            IList<DriveFile> childrenFiles = mDMgr.FetchChildrenFiles(dirId);
+            // Get files and folders of this directory in drive
+            IList<DriveFile> children = mDMgr.FetchChildren(dirId);
 
             // Start syncing this directory
-            // Check the drive for any files that do not exist locally and delete them
-            foreach (DriveFile dFile in childrenFiles)
+            // Check the drive for any files and folders that do not exist locally and delete them
+            List<DriveFile> foldersToDelete = new List<DriveFile>();
+            foreach (DriveFile dFile in children)
             {
                 bool existsLocally = false;
+
                 foreach (string file in dir.GetFiles())
                 {
                     if (dFile.Title.Equals(Path.GetFileName(file)))
@@ -50,14 +53,30 @@ namespace GooDPal.Drive
                     }
                 }
 
+                foreach (Directory subdir in dir.getSubDirectories())
+                {
+                    if(dFile.Title.Equals(subdir.GetName()))
+                    {
+                        existsLocally = true;
+                        break;
+                    }
+                }
+
                 // Delete if it doesn't exist
                 if (!existsLocally)
                 {
-                    Console.WriteLine("Deleting " + dFile.Title);
+                    string type;
+                    if (DriveManager.IsDirectory(dFile))
+                        type = "directory";
+                    else
+                        type = "file";
+
+                    Console.WriteLine("Deleting " + type + ": " + dFile.Title);
                     mDMgr.DeleteFile(dFile.Id);
                 }
             }
 
+            IList<DriveFile> childrenFiles = children.Where(d => !(DriveManager.IsDirectory(d))).ToList();
             // Upload or update files
             foreach (string file in dir.GetFiles())
             {
