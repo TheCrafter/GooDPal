@@ -17,6 +17,8 @@ namespace GooDPal.Drive
         private string mDescr;
         private string mParent;
 
+        private string mUploadBaseMsg;
+
         private long mFileLength;
 
         public FileUploader(DriveManager mgr)
@@ -38,6 +40,9 @@ namespace GooDPal.Drive
             FileInfo info = new FileInfo(mFilepath);
             mFileLength = info.Length;
 
+            // Set base message
+            mUploadBaseMsg = "Uploading";
+
             await mMgr.UploadFile(mFilepath, mDescr, mParent);
         }
 
@@ -46,6 +51,9 @@ namespace GooDPal.Drive
             // Find file length
             FileInfo info = new FileInfo(mFilepath);
             mFileLength = info.Length;
+
+            // Set base message
+            mUploadBaseMsg = "Updating";
 
             DriveFile file = DriveManager.FindFileByName(mMgr.FetchNonTrashed(), Path.GetFileName(mFilepath));
 
@@ -57,7 +65,7 @@ namespace GooDPal.Drive
 
         private void UploadProgressCallback(Google.Apis.Upload.IUploadProgress prog)
         {
-            string uploadMsg = "Uploading -- " + Path.GetFileName(mFilepath) + " ->";
+            string uploadMsg = mUploadBaseMsg + " -- " + Path.GetFileName(mFilepath) + " ->";
 
             switch (prog.Status)
             {
