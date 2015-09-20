@@ -154,7 +154,6 @@ namespace GooDPal
                     if (shouldUpload)
                     {
                         uploader.SetupFile(file, file, dirId);
-                        Console.WriteLine("Updating " + Path.GetFileName(file));
                         await uploader.Update();
                     }
                 }
