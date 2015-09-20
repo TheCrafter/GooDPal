@@ -47,7 +47,8 @@ namespace GooDPal
             {
                 Task.Run(async () =>
                 {
-                    await SyncDirectory(dir, dMgr, "root");
+                    Drive.DirectorySynchronizer ds = new DirectorySynchronizer(dMgr);
+                    await ds.SyncDirectory(dir, "root");
                 }).Wait();
             }
             catch (Exception e)
@@ -57,97 +58,6 @@ namespace GooDPal
 
             Console.WriteLine("Press enter to continue . . .");
             Console.Read();
-        }
-
-        static async Task SyncDirectory(Directory dir, DriveManager mgr, string parentId)
-        {
-            FileUploader uploader = new FileUploader(mgr);
-
-            // Get directories of parent and find this folder's id in drive
-            IList<DriveFile> parentChildren = mgr.FetchChildren(parentId);
-            string dirId = "";
-            foreach (DriveFile file in parentChildren)
-                if (file.Title.Equals(dir.GetName()))
-                    dirId = file.Id;
-
-            // Folder does not exist so create it
-            if (dirId.Equals(""))
-                dirId = mgr.CreateDirectory(dir.GetName(), dir.GetName(), parentId).Id;
-
-            // Get files of this directory in drive
-            IList<DriveFile> childrenFiles = mgr.FetchChildrenFiles(dirId);
-
-            // Start syncing this directory
-            // Check the drive for any files that do not exist locally and delete them
-            foreach (DriveFile dFile in childrenFiles)
-            {
-                bool existsLocally = false;
-                foreach (string file in dir.GetFiles())
-                {
-                    if (dFile.Title.Equals(Path.GetFileName(file)))
-                    {
-                        existsLocally = true;
-                        break;
-                    }
-                }
-
-                // Delete if it doesn't exist
-                if (!existsLocally)
-                {
-                    Console.WriteLine("Deleting " + dFile.Title);
-                    mgr.DeleteFile(dFile.Id);
-                }
-            }
-
-            // Upload or update files
-            foreach (string file in dir.GetFiles())
-            {
-                // Get simple filename
-                string filename = Path.GetFileName(file);
-
-                // Try to find it on drive
-                DriveFile fileInDrive = null;
-                foreach (DriveFile dFile in childrenFiles)
-                {
-                    if (dFile.Title.Equals(filename))
-                    {
-                        fileInDrive = dFile;
-                        break;
-                    }
-                }
-
-                // If didn't found it, upload it, else update it
-                if (fileInDrive != null)
-                {
-                    // If the local file is modified since the last time it was uploaded on drive, update it.
-                    // If not, just leave it as it is. In case of error (eg. the fileInDrive.ModifiedDate is null)
-                    // just upload it anyway. Better be safe than sorry :)
-                    bool shouldUpload = true;
-                    if (fileInDrive.ModifiedDate.HasValue)
-                    {
-                        DateTime localDate = System.IO.File.GetLastWriteTime(file);
-                        DateTime driveDate = (DateTime)fileInDrive.ModifiedDate;
-
-                        if (DateTime.Compare(localDate, driveDate) <= 0)
-                            shouldUpload = false;
-                    }
-
-                    if (shouldUpload)
-                    {
-                        uploader.SetupFile(file, file, dirId);
-                        await uploader.Update();
-                    }
-                }
-                else
-                {
-                    uploader.SetupFile(file, file, dirId);
-                    await uploader.Upload();
-                }
-            }
-
-            // Now get subdirectories and sync them
-            foreach (Directory subDir in dir.getSubDirectories())
-                await SyncDirectory(subDir, mgr, dirId);
         }
     }
 }
