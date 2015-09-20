@@ -47,7 +47,7 @@ namespace GooDPal
             {
                 Task.Run(async () =>
                 {
-                    await SyncDirectory(dir, dMgr);
+                    await SyncDirectory(dir, dMgr, "root");
                 }).Wait();
             }
             catch (Exception e)
@@ -59,26 +59,7 @@ namespace GooDPal
             Console.Read();
         }
 
-        static async Task SyncDirectory(Directory dir, DriveManager mgr)
-        {
-            IList<DriveFile> files = mgr.FetchDirectories();
-
-            // Find root id
-            string rootId = "";
-            foreach (DriveFile file in files)
-            {
-                IList<ParentReference> parents = file.Parents;
-                foreach (ParentReference p in parents)
-                    if (p.IsRoot.HasValue)
-                        if ((bool)p.IsRoot)
-                            rootId = p.Id;
-            }
-
-            // Start recursive sync process from root
-            await SyncDirectoryR(dir, mgr, rootId);
-        }
-
-        static async Task SyncDirectoryR(Directory dir, DriveManager mgr, string parentId)
+        static async Task SyncDirectory(Directory dir, DriveManager mgr, string parentId)
         {
             FileUploader uploader = new FileUploader(mgr);
 
@@ -166,7 +147,7 @@ namespace GooDPal
 
             // Now get subdirectories and sync them
             foreach (Directory subDir in dir.getSubDirectories())
-                await SyncDirectoryR(subDir, mgr, dirId);
+                await SyncDirectory(subDir, mgr, dirId);
         }
     }
 }
