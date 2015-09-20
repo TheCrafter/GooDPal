@@ -125,23 +125,38 @@ namespace GooDPal
                 string filename = Path.GetFileName(file);
 
                 // Try to find it on drive
-                bool found = false;
+                DriveFile fileInDrive = null;
                 foreach (DriveFile dFile in childrenFiles)
                 {
                     if (dFile.Title.Equals(filename))
                     {
-                        found = true;
+                        fileInDrive = dFile;
                         break;
                     }
                 }
 
-                // If didn't found it, upload it
-                if (found)
+                // If didn't found it, upload it, else update it
+                if (fileInDrive != null)
                 {
-                    // TODO: Check if should be updated
-                    uploader.SetupFile(file, file, dirId);
-                    Console.WriteLine("Updating " + Path.GetFileName(file));
-                    await uploader.Update();
+                    // If the local file is modified since the last time it was uploaded on drive, update it.
+                    // If not, just leave it as it is. In case of error (eg. the fileInDrive.ModifiedDate is null)
+                    // just upload it anyway. Better be safe than sorry :)
+                    bool shouldUpload = true;
+                    if (fileInDrive.ModifiedDate.HasValue)
+                    {
+                        DateTime localDate = System.IO.File.GetLastWriteTime(file);
+                        DateTime driveDate = (DateTime)fileInDrive.ModifiedDate;
+
+                        if (DateTime.Compare(localDate, driveDate) <= 0)
+                            shouldUpload = false;
+                    }
+
+                    if (shouldUpload)
+                    {
+                        uploader.SetupFile(file, file, dirId);
+                        Console.WriteLine("Updating " + Path.GetFileName(file));
+                        await uploader.Update();
+                    }
                 }
                 else
                 {
