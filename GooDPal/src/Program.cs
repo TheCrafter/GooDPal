@@ -14,28 +14,52 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using GooDPal.Drive;
+using GooDPal.Cmd;
+
+using CommandLine;
+using CommandLine.Parsing;
 
 namespace GooDPal
 {
     class Program
     {
-        static string LocalDirPath = "C:\\Users\\TheCrafter\\Desktop\\Test";
-        static string RemoteDirPath = "";
-
         static void Main(string[] args)
         {
-            DriveManager dMgr = new DriveManager();
+            // Local and remote path to retrieve from command line arguments
+            string localDirPath = null;
+            string remoteDirPath = null;
 
-            DriveService service = null;
-            try
+            // Parse command line arguments
             {
-                dMgr.InitService();
-                service = dMgr.GetDriveService();
+                CmdOptions options = new CmdOptions();
+                var parser = new CommandLine.Parser();
+
+                if (parser.ParseArguments(args, options))
+                {
+                    localDirPath = options.mLocalDirPath;
+                    remoteDirPath = options.mRemoteDirPath;
+                }
+                else
+                {
+                    Console.WriteLine(options.GetUsage());
+                    Environment.Exit(-1);
+                }
             }
-            catch (System.AggregateException e)
+
+            // Setup the drive connection
+            DriveManager dMgr = new DriveManager();
+            DriveService service = null;
             {
-                Console.WriteLine("Could not gain access to drive...");
-                Console.WriteLine(e.Message);
+                try
+                {
+                    dMgr.InitService();
+                    service = dMgr.GetDriveService();
+                }
+                catch (System.AggregateException e)
+                {
+                    Console.WriteLine("Could not gain access to drive...");
+                    Console.WriteLine(e.Message);
+                }
             }
 
             // Exit app if failed to create drive service
@@ -43,16 +67,16 @@ namespace GooDPal
                 System.Environment.Exit(0);
 
             // Create directory structure from path
-            Directory dir = new Directory(LocalDirPath);
+            Directory dir = new Directory(localDirPath);
             dir.Init();
 
             // Find root sync folder id
-            string syncRootId = FindRemoteFolderIdByPath(dMgr, "root", ParseSyncRootString(RemoteDirPath));
+            string syncRootId = FindRemoteFolderIdByPath(dMgr, "root", ParseSyncRootString(remoteDirPath));
             
             if(syncRootId == null)
             {
                 Console.WriteLine("The path you requested is invalid.");
-                Environment.Exit(1);
+                Environment.Exit(-1);
             }
 
             try
@@ -67,9 +91,6 @@ namespace GooDPal
             {
                 Console.WriteLine("An error occured while synchronization process:\n" + e.Message);
             }
-
-            Console.WriteLine("Press enter to continue . . .");
-            Console.Read();
         }
 
         static List<string> ParseSyncRootString(string str)
