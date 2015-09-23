@@ -115,6 +115,10 @@ namespace GooDPal.Drive
                         mUploader.SetupFile(file, file, dirId);
                         await mUploader.Update();
                     }
+                    else
+                    {
+                        Console.WriteLine("Skipped -- " + file);
+                    }
                 }
                 else
                 {
