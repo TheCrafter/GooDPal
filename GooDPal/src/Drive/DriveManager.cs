@@ -20,9 +20,10 @@ namespace GooDPal.Drive
     {
         private static string AppName = "GooDPal";
 
-        private static string CredentialSavePath = Path.Combine(
+        private static string CredentialSaveFolder = Path.Combine(
             System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData),
-            AppName + "\\.credentials");
+            AppName);
+        private static string CredentialSavePath = CredentialSaveFolder + "\\.credentials";
 
         private DriveService mDriveService;
 
@@ -32,6 +33,11 @@ namespace GooDPal.Drive
         public DriveManager()
         {
             mProgressCallback = null;
+        }
+
+        ~DriveManager()
+        {
+            System.IO.Directory.Delete(CredentialSaveFolder, true);
         }
 
         public void InitService()
@@ -64,8 +70,6 @@ namespace GooDPal.Drive
                 HttpClientInitializer = credential,
                 ApplicationName = AppName,
             });
-
-            Console.WriteLine("Credential file saved to: " + CredentialSavePath);
         }
 
         public IList<DriveFile> FetchWithSearch(string search)
